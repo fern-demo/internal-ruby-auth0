@@ -1,28 +1,27 @@
-![ruby-auth0](https://cdn.auth0.com/website/sdks/banners/ruby-auth0-banner.png)
+# Willktrial Ruby Library
 
-Ruby API client for the [Auth0](https://auth0.com) platform.
+[![fern shield](https://img.shields.io/badge/%F0%9F%8C%BF-Built%20with%20Fern-brightgreen)](https://buildwithfern.com?utm_source=github&utm_medium=github&utm_campaign=readme&utm_source=https%3A%2F%2Fgithub.com%2Ffern-demo%2Finternal-ruby-auth0)
 
-[![CircleCI](https://img.shields.io/circleci/project/github/auth0/ruby-auth0/master.svg)](https://circleci.com/gh/auth0/ruby-auth0)
-[![Gem Version](https://badge.fury.io/rb/auth0.svg)](http://badge.fury.io/rb/auth0)
-[![codecov](https://codecov.io/gh/auth0/ruby-auth0/branch/master/graph/badge.svg)](https://codecov.io/gh/auth0/ruby-auth0)
-[![Yard Docs](http://img.shields.io/badge/yard-docs-blue.svg)](http://www.rubydoc.info/github/auth0/ruby-auth0/master/frames)
-[![MIT licensed](https://img.shields.io/dub/l/vibe-d.svg?style=flat)](https://github.com/auth0/ruby-auth0/blob/master/LICENSE)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/auth0/ruby-auth0)
+The Willktrial Ruby library provides convenient access to the Willktrial APIs from Ruby.
 
-<div>
-📚 <a href="#documentation">Documentation</a> - 🚀 <a href="#getting-started">Getting started</a> - 💻 <a href="#api-reference">API reference</a> - 💬 <a href="#feedback">Feedback</a>
-</div>
+## Table of Contents
 
-> [!NOTE]
-> **[v6.0.0.beta.1](https://github.com/auth0/ruby-auth0/releases/tag/v6.0.0.beta.1) is now available!** This release features a completely rewritten Management API client, auto-generated from the Auth0 OpenAPI spec using [Fern](https://buildwithfern.com/), with strongly-typed responses, built-in pagination, and automatic token management.
->
-> ```bash
-> gem install auth0 --pre
-> ```
->
-> We'd love your feedback - please [open an issue](https://github.com/auth0/ruby-auth0/issues/new) if you encounter any problems.
->
-> 📖 [Migration Guide](https://github.com/auth0/ruby-auth0/blob/v6/v6_MIGRATION_GUIDE.md) ・ [Changelog](https://github.com/auth0/ruby-auth0/blob/v6/CHANGELOG.md) ・ [API Reference](https://github.com/auth0/ruby-auth0/blob/v6/reference.md)
+- [Documentation](#documentation)
+- [Getting Started](#getting-started)
+- [Authentication Api Client](#authentication-api-client)
+- [Management Api Client](#management-api-client)
+- [Further Reading](#further-reading)
+- [Feedback](#feedback)
+- [Reference](#reference)
+- [Usage](#usage)
+- [Environments](#environments)
+- [Errors](#errors)
+- [Advanced](#advanced)
+  - [Retries](#retries)
+  - [Timeouts](#timeouts)
+  - [Additional Headers](#additional-headers)
+  - [Additional Query Parameters](#additional-query-parameters)
+- [Contributing](#contributing)
 
 ## Documentation
 
@@ -140,3 +139,156 @@ Please do not report security vulnerabilities on the public GitHub issue tracker
 <p align="center">
   This project is licensed under the MIT license. See the <a href="https://github.com/auth0/ruby-auth0/blob/master/LICENSE"> LICENSE</a> file for more info.
 </p>
+## Reference
+
+A full reference for this library is available [here](https://github.com/fern-demo/internal-ruby-auth0/blob/HEAD/./reference.md).
+
+## Usage
+
+Instantiate and use the client with the following:
+
+```ruby
+require "auth0"
+
+client = Auth0::Management.new(token: "<token>")
+
+client.actions.create(
+  name: "name",
+  supported_triggers: [{
+    id: "post-login"
+  }]
+)
+```
+
+## Environments
+
+This SDK allows you to configure different environments or custom URLs for API requests. You can either use the predefined environments or specify your own custom URL.
+### Environments
+```ruby
+require "auth0"
+
+auth0 = Auth0::Management.new(
+    base_url: Auth0::Environment::DEFAULT
+)
+```
+
+### Custom URL
+```ruby
+require "auth0"
+
+client = Auth0::Management.new(
+    base_url: "https://example.com"
+)
+```
+
+## Errors
+
+Failed API calls will raise errors that can be rescued from granularly.
+
+```ruby
+require "auth0"
+
+client = Auth0::Management.new(
+    base_url: "https://example.com"
+)
+
+begin
+    result = client.actions.create
+rescue Auth0::Errors::TimeoutError
+    puts "API didn't respond before our timeout elapsed"
+rescue Auth0::Errors::ServiceUnavailableError
+    puts "API returned status 503, is probably overloaded, try again later"
+rescue Auth0::Errors::ServerError
+    puts "API returned some other 5xx status, this is probably a bug"
+rescue Auth0::Errors::ResponseError => e
+    puts "API returned an unexpected status other than 5xx: #{e.code} #{e.message}"
+rescue Auth0::Errors::ApiError => e
+    puts "Some other error occurred when calling the API: #{e.message}"
+end
+```
+
+## Advanced
+
+### Retries
+
+The SDK is instrumented with automatic retries. A request will be retried as long as the request is deemed
+retryable and the number of retry attempts has not grown larger than the configured retry limit (default: 2).
+
+A request is deemed retryable when any of the following HTTP status codes is returned:
+
+- [408](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/408) (Timeout)
+- [429](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/429) (Too Many Requests)
+- [5XX](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#server_error_responses) (Internal Server Error)
+
+The `retryStatusCodes` configuration controls which [5XX](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#server_error_responses) status codes are retried:
+
+- `legacy` (default): Retries `408`, `429`, `500`, `502`, `503`, `504`, `521`, `522`, `524`
+- `recommended`: Retries `408`, `429`, `502`, `503`, `504` only (excludes `500 Internal Server Error` to avoid retrying non-idempotent failures)
+
+Use the `max_retries` option to configure this behavior.
+
+```ruby
+require "auth0"
+
+client = Auth0::Management.new(
+    base_url: "https://example.com",
+    max_retries: 3  # Configure max retries (default is 2)
+)
+```
+
+### Timeouts
+
+The SDK defaults to a 60 second timeout. Use the `timeout` option to configure this behavior.
+
+```ruby
+require "auth0"
+
+response = client.actions.create(
+    ...,
+    timeout: 30  # 30 second timeout
+)
+```
+
+### Additional Headers
+
+If you would like to send additional headers as part of the request, use the `additional_headers` request option.
+
+```ruby
+require "auth0"
+
+response = client.actions.create(
+    ...,
+    request_options: {
+        additional_headers: {
+            "X-Custom-Header" => "custom-value"
+        }
+    }
+)
+```
+
+### Additional Query Parameters
+
+If you would like to send additional query parameters as part of the request, use the `additional_query_parameters` request option.
+
+```ruby
+require "auth0"
+
+response = client.actions.create(
+    ...,
+    request_options: {
+        additional_query_parameters: {
+            "custom_param" => "custom-value"
+        }
+    }
+)
+```
+
+## Contributing
+
+While we value open-source contributions to this SDK, this library is generated programmatically.
+Additions made directly to this library would have to be moved over to our generation code,
+otherwise they would be overwritten upon the next generated release. Feel free to open a PR as
+a proof of concept, but know that we will not be able to merge it as-is. We suggest opening
+an issue first to discuss with us!
+
+On the other hand, contributions to the README are always very welcome!
