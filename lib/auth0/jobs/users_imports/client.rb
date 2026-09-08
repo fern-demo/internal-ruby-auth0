@@ -30,7 +30,7 @@ module Auth0
           params = Auth0::Internal::Types::Utils.normalize_keys(params)
           body = Internal::Multipart::FormData.new
 
-          body.add_part(params[:users].to_form_data_part(name: "users")) if params[:users]
+          body.add_file(name: "users", file: params[:users]) if params[:users]
           if params[:connection_id]
             body.add(
               name: "connection_id",
