@@ -46,4 +46,24 @@ class JobsUsersImportsTest < Minitest::Test
     assert_includes captured.body, "name=\"connection_id\"\r\n\r\ncon_123"
     assert_includes captured.body, "name=\"upsert\"\r\n\r\ntrue"
   end
+
+  def test_create_keeps_explicit_false_body_parts
+    captured = nil
+    stub_request(:post, "#{BASE_URL}/jobs/users-imports")
+      .with { |req| captured = req }
+      .to_return(status: 200, body: { id: "job_1", status: "pending" }.to_json,
+                 headers: { "Content-Type" => "application/json" })
+
+    Tempfile.create(["users", ".json"]) do |file|
+      file.write("[]")
+      file.flush
+
+      @client.jobs.users_imports.create(users: file.path, connection_id: "con_123", upsert: false,
+                                        send_completion_email: false)
+    end
+
+    assert_includes captured.body, "name=\"upsert\"\r\n\r\nfalse"
+    assert_includes captured.body, "name=\"send_completion_email\"\r\n\r\nfalse"
+    refute_includes captured.body, "name=\"external_id\""
+  end
 end
