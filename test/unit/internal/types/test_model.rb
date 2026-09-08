@@ -144,6 +144,20 @@ describe Auth0::Internal::Types::Model do
       assert_equal 2014, example.year
       refute_respond_to example, :yearOfRelease
     end
+
+    it "prefers the api_name key when both api_name and field name are present" do
+      example = ExampleModel.new({ name: "Inception", yearOfRelease: 2014, year: 1999 })
+
+      assert_equal 2014, example.year
+      refute_includes example.to_h.keys, "year"
+    end
+
+    it "falls back to the field name key when the api_name value is nil" do
+      example = ExampleModel.new({ name: "Inception", yearOfRelease: nil, year: 1999 })
+
+      assert_equal 1999, example.year
+      assert_equal({ "name" => "Inception", "yearOfRelease" => 1999 }, example.to_h)
+    end
   end
 
   describe "#inspect" do
