@@ -175,7 +175,12 @@ module Auth0
           raise Auth0::Errors::TimeoutError
         end
         code = response.code.to_i
-        return if code.between?(200, 299)
+        if code.between?(200, 299)
+          return Auth0::Internal::Types::Utils.coerce(
+            Auth0::Internal::Types::Array[Auth0::Types::UserResponseSchema],
+            (response.body.to_s.empty? ? nil : JSON.parse(response.body, symbolize_names: true))
+          )
+        end
 
         error_class = Auth0::Errors::ResponseError.subclass_for_code(code)
         raise error_class.new(response.body, code: code)
