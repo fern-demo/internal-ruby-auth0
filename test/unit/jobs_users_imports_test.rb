@@ -2,15 +2,25 @@
 
 require_relative "../test_helper"
 require "minitest/autorun"
-require "webmock/minitest"
+require "webmock"
 require "tempfile"
 
 # Regression test for https://github.com/auth0/ruby-auth0/issues/796
 class JobsUsersImportsTest < Minitest::Test
   BASE_URL = "https://example.auth0.test/api/v2"
 
+  include WebMock::API
+
   def setup
+    WebMock.enable!
+    WebMock.disable_net_connect!
     @client = Auth0::Management.new(token: "<token>", base_url: BASE_URL)
+  end
+
+  def teardown
+    WebMock.reset!
+    WebMock.allow_net_connect!
+    WebMock.disable!
   end
 
   def test_create_uploads_the_users_file_as_multipart_part
