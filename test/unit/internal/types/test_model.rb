@@ -24,6 +24,15 @@ describe Auth0::Internal::Types::Model do
     field :type, String, default: "example"
   end
 
+  class ExampleWithBooleans < Auth0::Internal::Types::Model
+    field :enabled, Auth0::Internal::Types::Boolean
+    field :archived, Auth0::Internal::Types::Boolean, default: true
+  end
+
+  class ExampleWithFalseDefault < Auth0::Internal::Types::Model
+    field :archived, Auth0::Internal::Types::Boolean, default: false
+  end
+
   class ExampleChild < Auth0::Internal::Types::Model
     field :value, String
   end
@@ -104,11 +113,50 @@ describe Auth0::Internal::Types::Model do
       assert_kind_of ExampleChild, parent.child
     end
 
+    it "preserves false values instead of treating them as absent" do
+      example = ExampleWithBooleans.new(enabled: false)
+
+      refute example.enabled
+      assert_equal({ "enabled" => false, "archived" => true }, example.to_h)
+
+      loaded = ExampleWithBooleans.load({ enabled: false, archived: false }.to_json)
+
+      refute loaded.enabled
+      refute loaded.archived
+    end
+
+    it "applies a default of false" do
+      example = ExampleWithFalseDefault.new
+
+      refute example.archived
+      assert_equal({ "archived" => false }, example.to_h)
+    end
+
+    it "keeps blocked: false in the users.update request body" do
+      request = Auth0::Users::Types::UpdateUserRequestContent.new(id: "auth0|123", blocked: false)
+
+      assert_equal({ "blocked" => false }, request.to_h.except("id"))
+    end
+
     it "uses the api_name to pull the value" do
       example = ExampleModel.new({ name: "Inception", yearOfRelease: 2014 })
 
       assert_equal 2014, example.year
       refute_respond_to example, :yearOfRelease
+    end
+
+    it "prefers the api_name key when both api_name and field name are present" do
+      example = ExampleModel.new({ name: "Inception", yearOfRelease: 2014, year: 1999 })
+
+      assert_equal 2014, example.year
+      refute_includes example.to_h.keys, "year"
+    end
+
+    it "falls back to the field name key when the api_name value is nil" do
+      example = ExampleModel.new({ name: "Inception", yearOfRelease: nil, year: 1999 })
+
+      assert_equal 1999, example.year
+      assert_equal({ "name" => "Inception", "yearOfRelease" => 1999 }, example.to_h)
     end
   end
 
