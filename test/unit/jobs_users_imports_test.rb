@@ -47,7 +47,7 @@ class JobsUsersImportsTest < Minitest::Test
     assert_includes captured.body, "name=\"upsert\"\r\n\r\ntrue"
   end
 
-  def test_create_keeps_explicit_false_body_parts
+  def test_create_keeps_explicit_false_body_parts_and_omits_nil
     captured = nil
     stub_request(:post, "#{BASE_URL}/jobs/users-imports")
       .with { |req| captured = req }
@@ -59,7 +59,7 @@ class JobsUsersImportsTest < Minitest::Test
       file.flush
 
       @client.jobs.users_imports.create(users: file.path, connection_id: "con_123", upsert: false,
-                                        send_completion_email: false)
+                                        send_completion_email: false, external_id: nil)
     end
 
     assert_includes captured.body, "name=\"upsert\"\r\n\r\nfalse"

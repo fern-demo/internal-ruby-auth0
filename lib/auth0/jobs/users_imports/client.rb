@@ -31,25 +31,25 @@ module Auth0
           body = Internal::Multipart::FormData.new
 
           body.add_file(name: "users", file: params[:users]) if params[:users]
-          if params.key?(:connection_id)
+          unless params[:connection_id].nil?
             body.add(
               name: "connection_id",
               value: params[:connection_id]
             )
           end
-          if params.key?(:upsert)
+          unless params[:upsert].nil?
             body.add(
               name: "upsert",
               value: params[:upsert]
             )
           end
-          if params.key?(:external_id)
+          unless params[:external_id].nil?
             body.add(
               name: "external_id",
               value: params[:external_id]
             )
           end
-          if params.key?(:send_completion_email)
+          unless params[:send_completion_email].nil?
             body.add(
               name: "send_completion_email",
               value: params[:send_completion_email]
