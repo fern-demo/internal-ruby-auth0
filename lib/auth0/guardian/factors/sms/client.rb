@@ -193,10 +193,7 @@ module Auth0
             end
             code = response.code.to_i
             if code.between?(200, 299)
-              return Auth0::Internal::Types::Utils.coerce(
-                Auth0::Types::GetGuardianFactorSmsTemplatesResponseContent,
-                (response.body.to_s.empty? ? nil : JSON.parse(response.body, symbolize_names: true))
-              )
+              return (response.body.to_s.empty? ? nil : Auth0::Types::GetGuardianFactorSmsTemplatesResponseContent.load(response.body))
             end
 
             error_class = Auth0::Errors::ResponseError.subclass_for_code(code)
