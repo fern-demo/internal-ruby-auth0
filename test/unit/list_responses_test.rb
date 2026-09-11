@@ -79,5 +79,28 @@ class ListResponsesTest < Minitest::Test
 
     assert_kind_of Array, errors
     assert_equal 1, errors.size
+    assert_kind_of Auth0::Types::GetJobErrorResponseContent, errors.first
+    assert_equal "a@example.com", errors.first.user["email"]
+    assert_equal "x", errors.first.errors.first.code
+  end
+
+  def test_nullable_named_response_resolves_other_union_member
+    stub_json(:get, "jobs/job_1/errors",
+              { status: "failed", type: "users_import", id: "job_1",
+                errors: [{ code: "x", message: "bad" }] }.to_json)
+
+    errors = @client.jobs.errors.get(id: "job_1")
+
+    assert_kind_of Auth0::Types::GetJobGenericErrorResponseContent, errors
+    assert_equal "failed", errors.status
+  end
+
+  def test_nullable_named_model_response_is_deserialized
+    stub_json(:get, "guardian/factors/sms/templates", { enrollment_message: "hi", verification_message: "vv" }.to_json)
+
+    templates = @client.guardian.factors.sms.get_templates
+
+    assert_kind_of Auth0::Types::GetGuardianFactorSmsTemplatesResponseContent, templates
+    assert_equal "hi", templates.enrollment_message
   end
 end
